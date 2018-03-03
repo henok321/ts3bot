@@ -52,6 +52,7 @@ if __name__ == "__main__":
     USER = config['server']['query_user']
     PASS = config['server']['query_pw']
     SID = config['server']['sid']
+    NAME = config['bot']['name']
 
     print("Connecting to query interface ...")
 
@@ -59,6 +60,7 @@ if __name__ == "__main__":
         with ts3.query.TS3Connection(HOST, PORT) as ts3conn:
             ts3conn.login(client_login_name=USER, client_login_password=PASS)
             ts3conn.use(sid=SID)
+            ts3conn.clientupdate(client_nickname=NAME)
             print("Connected!")
 
             notify_bot(ts3conn, config)
