@@ -59,7 +59,7 @@ def keep_alive(ts3conn, lock):
         lock.acquire()
         ts3conn.send_keepalive()
         lock.release()
-        time.sleep(120)
+        time.sleep(300)
 
 
 if __name__ == "__main__":
