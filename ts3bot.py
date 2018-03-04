@@ -99,6 +99,8 @@ if __name__ == "__main__":
             notify_thread.join()
 
     except KeyboardInterrupt:
+        logging.INFO(60*"=")
         logging.info("TS Bot terminated by user!")
+        logging.INFO(60*"=")
     finally:
         ts3conn.close()
