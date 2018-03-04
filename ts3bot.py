@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 
 import configparser
+import threading
+import time
 
 import ts3
 
 __all__ = ["notify_bot"]
 
 
-def notify_bot(ts3conn, config):
+def notify_bot(ts3conn, config, lock):
     print("Start Notify Bot ...")
     submitter = config['notify']['submitter'].split(',')
     recipient = config['notify']['recipient'].split(',')
 
+    lock.acquire()
     ts3conn.servernotifyregister(event="server")
+    lock.release()
+
     while True:
+        lock.acquire()
         event = ts3conn.wait_for_event()
+        lock.release()
 
         try:
             reasonid_ = event[0]["reasonid"]
@@ -26,6 +33,7 @@ def notify_bot(ts3conn, config):
             print(event[0])
             servergroups = event[0]['client_servergroups']
             guestname = event[0]['client_nickname']
+            lock.acquire()
             if (not set(servergroups.split(",")).isdisjoint(submitter)):
                 admins = [client for client in list(ts3conn.clientlist(groups=True)) if
                           (not set(recipient).isdisjoint(client['client_servergroups'].split(",")))]
@@ -35,7 +43,17 @@ def notify_bot(ts3conn, config):
                 for c in admins:
                     ts3conn.sendtextmessage(msg="Guest {0} joined the lobby!".format(guestname), target=c['clid'],
                                             targetmode=1)
+            lock.release()
     return None
+
+
+def keep_alive(ts3conn, lock):
+    while True:
+        print("Send keep alive!")
+        lock.acquire()
+        ts3conn.send_keepalive()
+        lock.release()
+        time.sleep(300)
 
 
 if __name__ == "__main__":
@@ -63,7 +81,18 @@ if __name__ == "__main__":
             ts3conn.clientupdate(client_nickname=NAME)
             print("Connected!")
 
-            notify_bot(ts3conn, config)
-            ts3conn.close()
+            lock = threading.Lock()
+
+            notify_thread = threading.Thread(target=notify_bot, args=(ts3conn, config, lock), daemon=True)
+            keep_alive_thread = threading.Thread(target=keep_alive, args=(ts3conn, lock), daemon=True)
+
+            notify_thread.start()
+            keep_alive_thread.start()
+
+            notify_thread.join()
+            keep_alive_thread.join()
+
     except KeyboardInterrupt:
         print("TS Bot terminated by user!")
+    finally:
+        ts3conn.close()
