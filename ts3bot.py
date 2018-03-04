@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import configparser
+import logging
 import threading
 import time
 
@@ -8,9 +9,16 @@ import ts3
 
 __all__ = ["notify_bot"]
 
+logging.basicConfig(filename='data/logs/ts3bot.log',
+                    level=logging.INFO,
+                    format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+                    )
+
+logging.getLogger().addHandler(logging.StreamHandler())
+
 
 def notify_bot(ts3conn, config, lock):
-    print("Start Notify Bot ...")
+    logging.info("Start Notify Bot ...")
     submitter = config['notify']['submitter'].split(',')
     recipient = config['notify']['recipient'].split(',')
 
@@ -27,8 +35,8 @@ def notify_bot(ts3conn, config, lock):
             continue
 
         if reasonid_ == "0":
-            print("User joined Lobby:")
-            print(event[0])
+            logging.info("User joined Lobby:")
+            logging.info(event[0])
             servergroups = event[0]['client_servergroups']
             guestname = event[0]['client_nickname']
             lock.acquire()
@@ -36,8 +44,8 @@ def notify_bot(ts3conn, config, lock):
                 admins = [client for client in list(ts3conn.clientlist(groups=True)) if
                           (not set(recipient).isdisjoint(client['client_servergroups'].split(",")))]
 
-                print("Send notification to:")
-                print(admins)
+                logging.info("Send notification to:")
+                logging.info(admins)
                 for c in admins:
                     ts3conn.sendtextmessage(msg="Guest {0} joined the lobby!".format(guestname), target=c['clid'],
                                             targetmode=1)
@@ -47,21 +55,21 @@ def notify_bot(ts3conn, config, lock):
 
 def keep_alive(ts3conn, lock):
     while True:
-        print("Send keep alive!")
+        logging.info("Send keep alive!")
         lock.acquire()
         ts3conn.send_keepalive()
         lock.release()
-        time.sleep(5)
+        time.sleep(120)
 
 
 if __name__ == "__main__":
-    print("Start TS Bot ...")
+    logging.info("Start TS Bot ...")
 
     config = configparser.ConfigParser()
     config.sections()
-    config.read("config/ts3bot.ini")
+    config.read("data/config/ts3bot.ini")
 
-    print("Config loaded!")
+    logging.info("Config loaded!")
 
     HOST = config['server']['url']
     PORT = config['server']['query_port']
@@ -70,19 +78,19 @@ if __name__ == "__main__":
     SID = config['server']['sid']
     NAME = config['bot']['name']
 
-    print("Connecting to query interface ...")
+    logging.info("Connecting to query interface ...")
 
     try:
         with ts3.query.TS3Connection(HOST, PORT) as ts3conn:
             ts3conn.login(client_login_name=USER, client_login_password=PASS)
             ts3conn.use(sid=SID)
             ts3conn.clientupdate(client_nickname=NAME)
-            print("Connected!")
+            logging.info("Connected!")
 
             lock = threading.Lock()
 
-            notify_thread = threading.Thread(target=notify_bot, args=(ts3conn, config, lock), daemon=True)
-            keep_alive_thread = threading.Thread(target=keep_alive, args=(ts3conn, lock), daemon=True)
+            notify_thread = threading.Thread(target=notify_bot, args=(ts3conn, config, lock), daemon=True, name="notify")
+            keep_alive_thread = threading.Thread(target=keep_alive, args=(ts3conn, lock), daemon=True, name="keep_alive")
 
             notify_thread.start()
             keep_alive_thread.start()
@@ -91,6 +99,6 @@ if __name__ == "__main__":
             notify_thread.join()
 
     except KeyboardInterrupt:
-        print("TS Bot terminated by user!")
+        logging.info("TS Bot terminated by user!")
     finally:
         ts3conn.close()
