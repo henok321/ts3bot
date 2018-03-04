@@ -19,9 +19,7 @@ def notify_bot(ts3conn, config, lock):
     lock.release()
 
     while True:
-        lock.acquire()
         event = ts3conn.wait_for_event()
-        lock.release()
 
         try:
             reasonid_ = event[0]["reasonid"]
@@ -53,7 +51,7 @@ def keep_alive(ts3conn, lock):
         lock.acquire()
         ts3conn.send_keepalive()
         lock.release()
-        time.sleep(300)
+        time.sleep(5)
 
 
 if __name__ == "__main__":
@@ -89,8 +87,8 @@ if __name__ == "__main__":
             notify_thread.start()
             keep_alive_thread.start()
 
-            notify_thread.join()
             keep_alive_thread.join()
+            notify_thread.join()
 
     except KeyboardInterrupt:
         print("TS Bot terminated by user!")
