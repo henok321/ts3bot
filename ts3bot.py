@@ -40,7 +40,7 @@ def notify_bot(ts3conn, config, lock):
             servergroups = event[0]['client_servergroups']
             guestname = event[0]['client_nickname']
             lock.acquire()
-            if (not set(servergroups.split(",")).isdisjoint(submitter)):
+            if not set(servergroups.split(",")).isdisjoint(submitter):
                 admins = [client for client in list(ts3conn.clientlist(groups=True)) if
                           (not set(recipient).isdisjoint(client['client_servergroups'].split(",")))]
 
@@ -89,8 +89,10 @@ if __name__ == "__main__":
 
             lock = threading.Lock()
 
-            notify_thread = threading.Thread(target=notify_bot, args=(ts3conn, config, lock), daemon=True, name="notify")
-            keep_alive_thread = threading.Thread(target=keep_alive, args=(ts3conn, lock), daemon=True, name="keep_alive")
+            notify_thread = threading.Thread(target=notify_bot, args=(ts3conn, config, lock), daemon=True,
+                                             name="notify")
+            keep_alive_thread = threading.Thread(target=keep_alive, args=(ts3conn, lock), daemon=True,
+                                                 name="keep_alive")
 
             notify_thread.start()
             keep_alive_thread.start()
@@ -99,8 +101,8 @@ if __name__ == "__main__":
             notify_thread.join()
 
     except KeyboardInterrupt:
-        logging.INFO(60*"=")
+        logging.INFO(60 * "=")
         logging.info("TS Bot terminated by user!")
-        logging.INFO(60*"=")
+        logging.INFO(60 * "=")
     finally:
         ts3conn.close()
