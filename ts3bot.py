@@ -6,6 +6,7 @@ import threading
 
 import ts3
 
+from modules.afk_move import AfkMove
 from modules.keep_alive import KeepAlive
 from modules.notify import Notify
 
@@ -37,11 +38,14 @@ if __name__ == "__main__":
             ts3conn.clientupdate(client_nickname=config['bot']['name'])
             logging.info("Connected!")
 
-            # init modules
-            notify = Notify(ts3conn, config)
-            keep_alive = KeepAlive(ts3conn)
+            lock = threading.Lock()
 
-            modules = [notify, keep_alive]
+            # init modules
+            notify = Notify(ts3conn, config, lock)
+            keep_alive = KeepAlive(ts3conn, lock)
+            afk_move = AfkMove(ts3conn, config, lock)
+
+            modules = [notify, keep_alive, afk_move]
 
             # init threads
             module_threads = []
