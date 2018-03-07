@@ -19,6 +19,7 @@ logging.getLogger().addHandler(logging.StreamHandler())
 if __name__ == "__main__":
     logging.info("Start TS Bot ...")
 
+    # parse config file
     config = configparser.ConfigParser()
     config.sections()
     config.read("data/config/ts3bot.ini")
@@ -27,28 +28,34 @@ if __name__ == "__main__":
     logging.info("Connecting to query interface ...")
 
     try:
+        # connect via telnet
         with ts3.query.TS3Connection(config['server']['url'], config['server']['query_port']) as ts3conn:
             ts3conn.login(client_login_name=config['server']['query_user'],
                           client_login_password=config['server']['query_pw'])
+            # server parameter
             ts3conn.use(sid=config['server']['sid'])
             ts3conn.clientupdate(client_nickname=config['bot']['name'])
             logging.info("Connected!")
 
+            # init modules
             notify = Notify(ts3conn, config)
             keep_alive = KeepAlive(ts3conn)
 
-            notify_thread = threading.Thread(target=notify.run, daemon=True, name="notify")
-            keep_alive_thread = threading.Thread(target=keep_alive.run, daemon=True, name="keep_alive")
+            modules = [notify, keep_alive]
 
-            notify_thread.start()
-            keep_alive_thread.start()
+            # init threads
+            module_threads = []
 
-            keep_alive_thread.join()
-            notify_thread.join()
+            for m in modules:
+                module_threads.append(threading.Thread(target=m.run, daemon=True, name=m.__class__.__name__))
+
+            for t in module_threads:
+                t.start()
+
+            for t in module_threads:
+                t.join()
 
     except KeyboardInterrupt:
-        logging.INFO(60 * "=")
         logging.info("TS Bot terminated by user!")
-        logging.INFO(60 * "=")
     finally:
         ts3conn.close()
