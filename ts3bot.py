@@ -3,8 +3,6 @@ import time
 import threading
 import logging
 import configparser
-ä  # !/usr/bin/env python3
-
 
 __all__ = ["notify_bot"]
 
